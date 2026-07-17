@@ -1,0 +1,53 @@
+name: Deploy Next.js to Hostinger
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Instalar Dependências
+        run: npm ci
+
+      - name: Executar Build do Next.js
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+      # --- ALTERNATIVA 1: DEPLOY VIA SSH/RSYNC (RECOMENDADO PARA VPS) ---
+      # Para habilitar, cadastre no GitHub Secrets: HOSTINGER_SSH_KEY, HOSTINGER_HOST, HOSTINGER_USER, HOSTINGER_PORT e HOSTINGER_PATH
+      - name: Deploy via rsync (VPS SSH)
+        if: "${{ secrets.HOSTINGER_SSH_KEY != '' }}"
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.HOSTINGER_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -p ${{ secrets.HOSTINGER_PORT || '22' }} -H "${{ secrets.HOSTINGER_HOST }}" >> ~/.ssh/known_hosts
+          rsync -avz -e "ssh -p ${{ secrets.HOSTINGER_PORT || '22' }}" --delete .next/ standalone/ public/ ${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }}:${{ secrets.HOSTINGER_PATH }}
+          ssh -p ${{ secrets.HOSTINGER_PORT || '22' }} ${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }} "cd ${{ secrets.HOSTINGER_PATH }} && npm install --production && pm2 restart all || pm2 start server.js --name 'lifeum-flow'"
+
+      # --- ALTERNATIVA 2: DEPLOY VIA FTP (PARA HOSPEDAGEM COMPARTILHADA) ---
+      # Para habilitar, cadastre no GitHub Secrets: FTP_SERVER, FTP_USERNAME, FTP_PASSWORD e FTP_PATH
+      - name: Deploy via FTP (Shared Hosting)
+        if: "${{ secrets.FTP_SERVER != '' }}"
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: ${{ secrets.FTP_PATH || '/' }}
+          local-dir: ./ # ou ./out se configurado static export
