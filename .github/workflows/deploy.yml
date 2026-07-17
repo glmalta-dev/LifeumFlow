@@ -2,52 +2,86 @@ name: Deploy Next.js to Hostinger
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: hostinger-production
+  cancel-in-progress: true
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    environment: production
+    env:
+      HAS_HOSTINGER_SSH: ${{ secrets.HOSTINGER_SSH_KEY != '' && secrets.HOSTINGER_HOST != '' && secrets.HOSTINGER_USER != '' && secrets.HOSTINGER_PATH != '' }}
+      HAS_HOSTINGER_FTP: ${{ secrets.FTP_SERVER != '' && secrets.FTP_USERNAME != '' && secrets.FTP_PASSWORD != '' }}
+      HOSTINGER_PORT: ${{ secrets.HOSTINGER_PORT || '22' }}
 
     steps:
-      - name: Checkout Código
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configurar Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: npm
 
-      - name: Instalar Dependências
+      - name: Install dependencies
         run: npm ci
 
-      - name: Executar Build do Next.js
+      - name: Lint
+        run: npm run lint
+
+      - name: Build standalone application
         run: npm run build
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
-      # --- ALTERNATIVA 1: DEPLOY VIA SSH/RSYNC (RECOMENDADO PARA VPS) ---
-      # Para habilitar, cadastre no GitHub Secrets: HOSTINGER_SSH_KEY, HOSTINGER_HOST, HOSTINGER_USER, HOSTINGER_PORT e HOSTINGER_PATH
-      - name: Deploy via rsync (VPS SSH)
-        if: "${{ secrets.HOSTINGER_SSH_KEY != '' }}"
+      - name: Prepare deployment bundle
+        shell: bash
+        run: |
+          cp -r public .next/standalone/public
+          mkdir -p .next/standalone/.next
+          cp -r .next/static .next/standalone/.next/static
+
+      - name: Configure SSH
+        if: env.HAS_HOSTINGER_SSH == 'true'
+        shell: bash
+        env:
+          HOSTINGER_SSH_KEY: ${{ secrets.HOSTINGER_SSH_KEY }}
+          HOSTINGER_HOST: ${{ secrets.HOSTINGER_HOST }}
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.HOSTINGER_SSH_KEY }}" > ~/.ssh/id_rsa
+          printf '%s' "$HOSTINGER_SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -p ${{ secrets.HOSTINGER_PORT || '22' }} -H "${{ secrets.HOSTINGER_HOST }}" >> ~/.ssh/known_hosts
-          rsync -avz -e "ssh -p ${{ secrets.HOSTINGER_PORT || '22' }}" --delete .next/ standalone/ public/ ${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }}:${{ secrets.HOSTINGER_PATH }}
-          ssh -p ${{ secrets.HOSTINGER_PORT || '22' }} ${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }} "cd ${{ secrets.HOSTINGER_PATH }} && npm install --production && pm2 restart all || pm2 start server.js --name 'lifeum-flow'"
+          ssh-keyscan -p "$HOSTINGER_PORT" -H "$HOSTINGER_HOST" >> ~/.ssh/known_hosts
 
-      # --- ALTERNATIVA 2: DEPLOY VIA FTP (PARA HOSPEDAGEM COMPARTILHADA) ---
-      # Para habilitar, cadastre no GitHub Secrets: FTP_SERVER, FTP_USERNAME, FTP_PASSWORD e FTP_PATH
-      - name: Deploy via FTP (Shared Hosting)
-        if: "${{ secrets.FTP_SERVER != '' }}"
+      - name: Deploy via SSH
+        if: env.HAS_HOSTINGER_SSH == 'true'
+        shell: bash
+        env:
+          HOSTINGER_HOST: ${{ secrets.HOSTINGER_HOST }}
+          HOSTINGER_USER: ${{ secrets.HOSTINGER_USER }}
+          HOSTINGER_PATH: ${{ secrets.HOSTINGER_PATH }}
+        run: |
+          rsync -az --delete -e "ssh -p $HOSTINGER_PORT" .next/standalone/ "$HOSTINGER_USER@$HOSTINGER_HOST:$HOSTINGER_PATH/"
+          ssh -p "$HOSTINGER_PORT" "$HOSTINGER_USER@$HOSTINGER_HOST" "cd '$HOSTINGER_PATH' && (pm2 restart lifeum-flow || pm2 start server.js --name lifeum-flow)"
+
+      - name: Deploy bundle via FTP
+        if: env.HAS_HOSTINGER_SSH != 'true' && env.HAS_HOSTINGER_FTP == 'true'
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           server-dir: ${{ secrets.FTP_PATH || '/' }}
-          local-dir: ./ # ou ./out se configurado static export
+          local-dir: ./.next/standalone/
+
+      - name: Require Hostinger deployment credentials
+        if: env.HAS_HOSTINGER_SSH != 'true' && env.HAS_HOSTINGER_FTP != 'true'
+        run: |
+          echo "Nenhuma credencial de deploy da Hostinger foi configurada nos GitHub Secrets."
+          exit 1
