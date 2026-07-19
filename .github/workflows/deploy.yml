@@ -1,4 +1,4 @@
-name: Deploy Next.js to Hostinger
+name: Validate Next.js and deploy to Hostinger
 
 on:
   push:
@@ -80,8 +80,7 @@ jobs:
           server-dir: ${{ secrets.FTP_PATH || '/' }}
           local-dir: ./.next/standalone/
 
-      - name: Require Hostinger deployment credentials
+      - name: Confirm Hostinger Git deployment handoff
         if: env.HAS_HOSTINGER_SSH != 'true' && env.HAS_HOSTINGER_FTP != 'true'
         run: |
-          echo "Nenhuma credencial de deploy da Hostinger foi configurada nos GitHub Secrets."
-          exit 1
+          echo "Build validado. O deploy e realizado pela integracao Git da Hostinger conectada ao repositorio LifeumFlowHostinger."
