@@ -9,8 +9,13 @@ interface AppHeaderProps {
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({ title }) => {
-  const { tasks } = useApp();
+  const { tasks, currentUser } = useApp();
   const pendingHigh = tasks.filter(t => t.status === "pending" && t.priority === "high").length;
+  
+  const userName = currentUser?.user_metadata?.name || currentUser?.email?.split("@")[0] || "Dentista";
+  const userAvatar = currentUser?.user_metadata?.avatar_url;
+  const avatarLetter = userName.charAt(0).toUpperCase();
+
   const getFormattedDate = () => {
     const options: Intl.DateTimeFormatOptions = { 
       weekday: 'long', 
@@ -24,9 +29,15 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ title }) => {
     <header style={styles.header}>
       <div style={styles.topRow}>
         <div style={styles.profileArea}>
-          <div style={styles.avatar}>G</div>
+          <Link href="/mais/perfil" style={{ textDecoration: "none" }} aria-label="Acessar perfil">
+            {userAvatar ? (
+              <img src={userAvatar} alt={userName} style={styles.avatarImg} />
+            ) : (
+              <div style={styles.avatar}>{avatarLetter}</div>
+            )}
+          </Link>
           <div>
-            <div style={styles.welcome}>Olá, Gabriel</div>
+            <div style={styles.welcome}>Olá, {userName}</div>
             <div style={styles.date} suppressHydrationWarning>{getFormattedDate()}</div>
           </div>
         </div>
@@ -75,6 +86,14 @@ const styles = {
     fontWeight: "bold",
     fontSize: "14px",
     boxShadow: "0 2px 5px rgba(20, 99, 230, 0.15)"
+  },
+  avatarImg: {
+    width: "36px",
+    height: "36px",
+    borderRadius: "50%",
+    objectFit: "cover" as const,
+    boxShadow: "0 2px 5px rgba(20, 99, 230, 0.15)",
+    border: "1px solid var(--border-light)",
   },
   welcome: {
     fontSize: "12px",
