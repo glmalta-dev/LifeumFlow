@@ -1,7 +1,7 @@
 # STATUS ATUAL
 
 - **Ultima atualizacao:** 19/07/2026 20:15 (America/Sao_Paulo)
-- **Fase atual:** fechamento funcional e publicacao do MVP
+- **Fase atual:** MVP funcional publicado; validacao autenticada pendente
 - **Branch:** `main`
 - **Supabase:** `jcteqdvkviodempumgqp`
 
@@ -24,7 +24,7 @@
 - Login invalido, logout, recovery, recarga e expiracao de sessao no navegador publicado.
 - CRUD vertical com reload para paciente, pendencia, agenda, evolucao, arquivo e planejamento.
 - Responsividade visual em aparelho real de aproximadamente 390 px.
-- GitHub Actions e deploy Hostinger apos o push desta rodada.
+- Validacao funcional autenticada do deploy Hostinger.
 
 ## Pendencias externas ou decisoes abertas
 
@@ -39,3 +39,4 @@
 - Migrations locais e remotas alinhadas e aplicadas.
 - Testes SQL transacionais com rollback: auditoria, conflito de agenda e conversao de lead aprovados sem dados residuais.
 - Advisor de seguranca: somente `auth_leaked_password_protection` permanece.
+- Commit `4a99bf8` publicado nos dois repositorios; URL publica respondeu por HTTPS e exibiu a nova recuperacao de senha.

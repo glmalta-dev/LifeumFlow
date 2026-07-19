@@ -2,7 +2,7 @@
 
 - **Data:** 19/07/2026
 - **Escopo:** itens consolidados da documentacao mestra ainda ausentes no sistema.
-- **Status:** codigo e Supabase implementados; aguardando validacao autenticada no deploy.
+- **Status:** codigo, Supabase e deploy publicados; aguardando validacao autenticada dos fluxos.
 
 ## Entregas
 
@@ -20,6 +20,7 @@
 - Migrations aplicadas e historico local/remoto alinhado.
 - Testes SQL de auditoria, conflito e conversao executados em transacao com rollback.
 - Advisors sem falhas de seguranca controlaveis por migration; permanece a protecao de senha vazada do painel Auth.
+- Commit `4a99bf8` confirmado em `LifeumFlow` e `LifeumFlowHostinger`; HTTPS publico exibiu a nova tela de login com recuperacao de senha.
 
 ## Fora do escopo por decisao aberta
 

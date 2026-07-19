@@ -17,11 +17,11 @@
 - `TASK-AUTH-024` — SSR, recovery e renovacao segura de sessao.
 - `TASK-CRM-025` — leads, eventos de contato e conversao atomica.
 - `TASK-AUD-026` — auditoria e concorrencia otimista.
+- `TASK-DEP-018` — publicar o mesmo commit nos repositorios fonte e Hostinger e validar a nova tela por HTTPS.
 
 ## Prioridade maxima
 
 - `TASK-E2E-017` — validar manualmente login/logout/sessao e CRUD com reload pela UI publicada.
-- `TASK-DEP-018` — validar GitHub Actions e deploy Hostinger apos push.
 - `TASK-UX-027` — verificacao visual autenticada em viewport real de aproximadamente 390 px.
 
 ## Externo
