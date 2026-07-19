@@ -2,9 +2,35 @@
 
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { useApp } from "@/context/AppContext";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function MaisPage() {
+  const router = useRouter();
+  const { showToast } = useApp();
+  const supabaseConfigured = Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
+
+  // Verificar se o Supabase está configurado (de forma simplificada verificando se há chaves ativas no build)
+  const handleLogout = async () => {
+    try {
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
+    } catch (err) {
+      console.error("Erro ao realizar logout no Supabase:", err);
+    }
+    
+    // Expirar o cookie de sessão real
+    document.cookie = "lifeum-flow-session-jwt=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax; Secure";
+    localStorage.removeItem("user-email");
+    showToast("Sessão finalizada com sucesso!", "success");
+    router.push("/login");
+  };
+
   const menuItems = [
     {
       id: "contatos",
@@ -49,6 +75,33 @@ export default function MaisPage() {
     <>
       <AppHeader title="Mais Opções" />
 
+      {/* Alerta de Configuração do Supabase (Requisito 1) */}
+      <div style={{
+        ...styles.supabaseAlert,
+        backgroundColor: supabaseConfigured ? "var(--success-bg)" : "var(--warning-bg)",
+        borderColor: supabaseConfigured ? "var(--success)" : "var(--warning)",
+        color: supabaseConfigured ? "var(--success)" : "var(--warning)"
+      }}>
+        <div style={styles.alertHeader}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            {supabaseConfigured ? (
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            ) : (
+              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z"></path>
+            )}
+            {supabaseConfigured && <polyline points="22 4 12 14.01 9 11.01"></polyline>}
+          </svg>
+          <span style={styles.alertTitle}>
+            {supabaseConfigured ? "Supabase Conectado" : "Status do Banco de Dados"}
+          </span>
+        </div>
+        <p style={{ ...styles.alertDesc, color: "var(--text-secondary)" }}>
+          {supabaseConfigured 
+            ? "A sincronização real de dados clínicos com o Supabase está ativada."
+            : "Insira a chave NEXT_PUBLIC_SUPABASE_ANON_KEY no arquivo .env.local para ativar a gravação em banco de dados real da clínica."}
+        </p>
+      </div>
+
       <div style={styles.menuList}>
         {menuItems.map((item) => {
           return (
@@ -64,12 +117,51 @@ export default function MaisPage() {
               </Link>
             );
         })}
+
+        {/* Botão de Logout */}
+        <button onClick={handleLogout} style={styles.logoutBtn} aria-label="Sair do painel clínico">
+          <div style={styles.logoutIconWrap}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+          </div>
+          <div style={{ ...styles.textCol, textAlign: "left" }}>
+            <h4 style={{ ...styles.menuTitle, color: "var(--error)" }}>Sair do Painel</h4>
+            <p style={styles.menuSubtitle}>Finalizar sessão clínica de forma segura</p>
+          </div>
+        </button>
       </div>
     </>
   );
 }
 
 const styles = {
+  supabaseAlert: {
+    padding: "12px 14px",
+    borderRadius: "14px",
+    border: "1px solid",
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: "6px",
+    marginBottom: "16px",
+  },
+  alertHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    fontWeight: "bold",
+    fontSize: "12px",
+  },
+  alertTitle: {
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.5px",
+  },
+  alertDesc: {
+    fontSize: "11px",
+    lineHeight: "1.4",
+  },
   menuList: {
     display: "flex",
     flexDirection: "column" as const,
@@ -113,5 +205,30 @@ const styles = {
     fontSize: "11px",
     color: "var(--text-secondary)",
     marginTop: "2px",
+  },
+  logoutBtn: {
+    backgroundColor: "#ffffff",
+    border: "1px solid var(--border-light)",
+    borderRadius: "14px",
+    padding: "16px",
+    display: "flex",
+    alignItems: "center",
+    gap: "14px",
+    cursor: "pointer",
+    boxShadow: "var(--shadow-sm)",
+    width: "100%",
+    fontFamily: "inherit",
+    outline: "none",
+  },
+  logoutIconWrap: {
+    width: "36px",
+    height: "36px",
+    borderRadius: "10px",
+    backgroundColor: "var(--error-bg)",
+    color: "var(--error)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
   }
 };

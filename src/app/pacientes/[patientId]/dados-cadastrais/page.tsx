@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 import { BackHeader } from "@/components/layout/BackHeader";
+import type { Patient } from "@/types";
 
 export default function DadosCadastraisPage() {
   const params = useParams();
@@ -18,14 +19,24 @@ export default function DadosCadastraisPage() {
   const [phone, setPhone] = useState(patient?.phone ?? "");
   const [email, setEmail] = useState(patient?.email ?? "");
   const [birthDate, setBirthDate] = useState(patient?.birthDate ?? "");
+  const [sex, setSex] = useState<"female" | "male" | "intersex" | "not_informed">(patient?.sex ?? "not_informed");
   const [status, setStatus] = useState<"active" | "alert" | "inactive">(patient?.status ?? "active");
   const [nextAction, setNextAction] = useState(patient?.nextAction ?? "");
   const [notes, setNotes] = useState(patient?.notes ?? "");
+  
+  // Novos campos requeridos para edição de dados cadastrais
+  const [cpf, setCpf] = useState(patient?.cpf ?? "");
+  const [address, setAddress] = useState(patient?.address ?? "");
+  const [addressNumber, setAddressNumber] = useState(patient?.addressNumber ?? "");
+  const [addressComplement, setAddressComplement] = useState(patient?.addressComplement ?? "");
+  const [neighborhood, setNeighborhood] = useState(patient?.neighborhood ?? "");
+  const [city, setCity] = useState(patient?.city ?? "");
+  const [state, setState] = useState(patient?.state ?? "");
+  const [postalCode, setPostalCode] = useState(patient?.postalCode ?? "");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !phone) {
-      alert("Por favor, preencha nome e celular.");
       return;
     }
 
@@ -34,9 +45,18 @@ export default function DadosCadastraisPage() {
       phone,
       email,
       birthDate,
+      sex,
       status,
+      cpf: cpf || undefined,
       nextAction: nextAction || undefined,
-      notes: notes || undefined
+      notes: notes || undefined,
+      address: address || undefined,
+      addressNumber: addressNumber || undefined,
+      addressComplement: addressComplement || undefined,
+      neighborhood: neighborhood || undefined,
+      city: city || undefined,
+      state: state || undefined,
+      postalCode: postalCode || undefined
     });
 
     router.push(`/pacientes/${patientId}/resumo`);
@@ -49,8 +69,10 @@ export default function DadosCadastraisPage() {
       <form onSubmit={handleSubmit} style={styles.form}>
         {/* Nome */}
         <div className="form-group">
-          <label className="form-label">NOME COMPLETO</label>
+          <label htmlFor="patient-name" className="form-label">NOME COMPLETO *</label>
           <input 
+            id="patient-name"
+            name="name"
             type="text" 
             className="form-control" 
             value={name} 
@@ -59,22 +81,41 @@ export default function DadosCadastraisPage() {
           />
         </div>
 
-        {/* Celular */}
-        <div className="form-group">
-          <label className="form-label">CELULAR / WHATSAPP</label>
-          <input 
-            type="text" 
-            className="form-control" 
-            value={phone} 
-            onChange={(e) => setPhone(e.target.value)} 
-            required
-          />
+        {/* Celular e CPF */}
+        <div style={{ display: "flex", gap: "8px" }}>
+          <div className="form-group" style={{ flex: 1 }}>
+            <label htmlFor="patient-phone" className="form-label">CELULAR / WHATSAPP *</label>
+            <input 
+              id="patient-phone"
+              name="phone"
+              type="text" 
+              className="form-control" 
+              value={phone} 
+              onChange={(e) => setPhone(e.target.value)} 
+              required
+            />
+          </div>
+
+          <div className="form-group" style={{ flex: 1 }}>
+            <label htmlFor="patient-cpf" className="form-label">CPF</label>
+            <input 
+              id="patient-cpf"
+              name="cpf"
+              type="text" 
+              className="form-control" 
+              placeholder="Ex: 000.000.000-00"
+              value={cpf} 
+              onChange={(e) => setCpf(e.target.value)} 
+            />
+          </div>
         </div>
 
         {/* E-mail */}
         <div className="form-group">
-          <label className="form-label">E-MAIL</label>
+          <label htmlFor="patient-email" className="form-label">E-MAIL</label>
           <input 
+            id="patient-email"
+            name="email"
             type="email" 
             className="form-control" 
             value={email} 
@@ -82,21 +123,141 @@ export default function DadosCadastraisPage() {
           />
         </div>
 
-        {/* Nascimento */}
-        <div className="form-group">
-          <label className="form-label">DATA DE NASCIMENTO</label>
-          <input 
-            type="date" 
-            className="form-control" 
-            value={birthDate} 
-            onChange={(e) => setBirthDate(e.target.value)} 
-          />
+        {/* Nascimento e Sexo */}
+        <div style={{ display: "flex", gap: "8px" }}>
+          <div className="form-group" style={{ flex: 1 }}>
+            <label htmlFor="patient-birth" className="form-label">NASCIMENTO</label>
+            <input 
+              id="patient-birth"
+              name="birthDate"
+              type="date" 
+              className="form-control" 
+              value={birthDate} 
+              onChange={(e) => setBirthDate(e.target.value)} 
+            />
+          </div>
+
+          <div className="form-group" style={{ flex: 1 }}>
+            <label htmlFor="patient-sex" className="form-label">SEXO / GÊNERO</label>
+            <select
+              id="patient-sex"
+              name="sex"
+              className="form-control"
+              value={sex}
+              onChange={(e) => setSex(e.target.value as NonNullable<Patient["sex"]>)}
+            >
+              <option value="not_informed">Não Informado</option>
+              <option value="female">Feminino</option>
+              <option value="male">Masculino</option>
+              <option value="intersex">Intersexo</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Endereço - Logradouro e CEP */}
+        <div style={{ display: "flex", gap: "8px" }}>
+          <div className="form-group" style={{ flex: 2 }}>
+            <label htmlFor="patient-addr" className="form-label">ENDEREÇO (RUA/AVENIDA)</label>
+            <input 
+              id="patient-addr"
+              name="address"
+              type="text" 
+              className="form-control" 
+              placeholder="Ex: Rua das Flores"
+              value={address} 
+              onChange={(e) => setAddress(e.target.value)} 
+            />
+          </div>
+
+          <div className="form-group" style={{ flex: 1 }}>
+            <label htmlFor="patient-cep" className="form-label">CEP</label>
+            <input 
+              id="patient-cep"
+              name="postalCode"
+              type="text" 
+              className="form-control" 
+              placeholder="00000-000"
+              value={postalCode} 
+              onChange={(e) => setPostalCode(e.target.value)} 
+            />
+          </div>
+        </div>
+
+        {/* Número, Complemento e Bairro */}
+        <div style={{ display: "flex", gap: "8px" }}>
+          <div className="form-group" style={{ flex: 1 }}>
+            <label htmlFor="patient-num" className="form-label">NÚMERO</label>
+            <input 
+              id="patient-num"
+              name="addressNumber"
+              type="text" 
+              className="form-control" 
+              placeholder="Ex: 123"
+              value={addressNumber} 
+              onChange={(e) => setAddressNumber(e.target.value)} 
+            />
+          </div>
+          <div className="form-group" style={{ flex: 1 }}>
+            <label htmlFor="patient-comp" className="form-label">COMPLEMENTO</label>
+            <input 
+              id="patient-comp"
+              name="addressComplement"
+              type="text" 
+              className="form-control" 
+              placeholder="Ex: Apto 4"
+              value={addressComplement} 
+              onChange={(e) => setAddressComplement(e.target.value)} 
+            />
+          </div>
+          <div className="form-group" style={{ flex: 2 }}>
+            <label htmlFor="patient-neigh" className="form-label">BAIRRO</label>
+            <input 
+              id="patient-neigh"
+              name="neighborhood"
+              type="text" 
+              className="form-control" 
+              placeholder="Ex: Centro"
+              value={neighborhood} 
+              onChange={(e) => setNeighborhood(e.target.value)} 
+            />
+          </div>
+        </div>
+
+        {/* Cidade e Estado */}
+        <div style={{ display: "flex", gap: "8px" }}>
+          <div className="form-group" style={{ flex: 2 }}>
+            <label htmlFor="patient-city" className="form-label">CIDADE</label>
+            <input 
+              id="patient-city"
+              name="city"
+              type="text" 
+              className="form-control" 
+              value={city} 
+              onChange={(e) => setCity(e.target.value)} 
+            />
+          </div>
+
+          <div className="form-group" style={{ flex: 1 }}>
+            <label htmlFor="patient-state" className="form-label">ESTADO</label>
+            <input 
+              id="patient-state"
+              name="state"
+              type="text" 
+              className="form-control" 
+              placeholder="Ex: SP"
+              maxLength={2}
+              value={state} 
+              onChange={(e) => setState(e.target.value.toUpperCase())} 
+            />
+          </div>
         </div>
 
         {/* Status */}
         <div className="form-group">
-          <label className="form-label">STATUS CLÍNICO</label>
+          <label htmlFor="patient-status" className="form-label">STATUS CLÍNICO</label>
           <select 
+            id="patient-status"
+            name="status"
             className="form-control" 
             value={status} 
             onChange={(e) => setStatus(e.target.value as "active" | "alert" | "inactive")}
@@ -109,11 +270,13 @@ export default function DadosCadastraisPage() {
 
         {/* Próxima Ação */}
         <div className="form-group">
-          <label className="form-label">PRÓXIMA AÇÃO CLÍNICO-OPERACIONAL</label>
+          <label htmlFor="patient-action" className="form-label">PRÓXIMA AÇÃO CLÍNICO-OPERACIONAL</label>
           <input 
+            id="patient-action"
+            name="nextAction"
             type="text" 
             className="form-control" 
-            placeholder="Ex: Cobrar exame, remarcar cirurgia..."
+            placeholder="Ex: Definir próxima consulta..."
             value={nextAction} 
             onChange={(e) => setNextAction(e.target.value)} 
           />
@@ -121,17 +284,19 @@ export default function DadosCadastraisPage() {
 
         {/* Notas */}
         <div className="form-group">
-          <label className="form-label">OBSERVAÇÕES ADICIONAIS</label>
+          <label htmlFor="patient-notes" className="form-label">NOTAS INICIAIS</label>
           <textarea 
+            id="patient-notes"
+            name="notes"
             rows={3} 
             className="form-control" 
-            placeholder="Alergias, convênio ou preferências do paciente..."
+            placeholder="Observações do paciente..."
             value={notes} 
             onChange={(e) => setNotes(e.target.value)} 
           />
         </div>
 
-        {/* Submit */}
+        {/* Actions */}
         <div style={styles.actions}>
           <button type="submit" className="btn btn-primary">
             Salvar Alterações

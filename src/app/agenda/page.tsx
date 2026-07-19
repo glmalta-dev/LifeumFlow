@@ -7,7 +7,7 @@ import { AppHeader } from "@/components/layout/AppHeader";
 
 export default function AgendaPage() {
   const router = useRouter();
-  const { appointments } = useApp();
+  const { appointments, updateAppointment } = useApp();
   const [activeTab, setActiveTab] = useState<"hoje" | "todos">("hoje");
 
   const todayStr = new Date().toISOString().split('T')[0];
@@ -61,6 +61,25 @@ export default function AgendaPage() {
                 <h4 style={styles.patientName}>{app.patientName}</h4>
                 <p style={styles.appDesc}>{app.type.toUpperCase()} • {app.professional}</p>
               </div>
+              {`${app.date}T${app.time}` < new Date().toISOString().slice(0, 16) && (app.status === "agendado" || app.status === "confirmado") ? (
+                <select
+                  aria-label={`Desfecho de ${app.patientName}`}
+                  className="form-control"
+                  defaultValue=""
+                  onClick={(event) => event.stopPropagation()}
+                  onChange={(event) => {
+                    event.stopPropagation();
+                    if (event.target.value) void updateAppointment(app.id, { status: event.target.value as typeof app.status, notes: app.notes });
+                  }}
+                  style={{ width: 110 }}
+                >
+                  <option value="">Desfecho</option>
+                  <option value="realizado">Compareceu</option>
+                  <option value="faltou">Faltou</option>
+                  <option value="cancelado">Cancelou</option>
+                  <option value="reagendado">Reagendou</option>
+                </select>
+              ) : null}
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: "var(--outline-variant)" }}>
                 <polyline points="9 18 15 12 9 6"></polyline>
               </svg>

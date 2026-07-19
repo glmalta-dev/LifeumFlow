@@ -4,17 +4,26 @@ import React from "react";
 import { useApp } from "@/context/AppContext";
 import { BackHeader } from "@/components/layout/BackHeader";
 import type { Lead } from "@/types";
+import { buildWhatsAppUrl } from "@/lib/phone";
 
 export default function ContatosPage() {
   const { leads, moveLead, showToast } = useApp();
 
-  const handleLeadContact = (lead: Lead) => {
-    showToast(`Disparando WhatsApp para Lead ${lead.name}...`, "success");
-    window.open(`https://wa.me/5511987654321?text=Olá ${lead.name}, recebemos seu interesse pelo canal ${lead.source}.`, "_blank");
+  const handleLeadContact = async (lead: Lead) => {
+    const url = buildWhatsAppUrl(lead.phone, `Ola ${lead.name}, recebemos seu interesse pelo canal ${lead.source}.`);
+    if (!url) {
+      showToast("Telefone do contato invalido ou sem DDD.", "error");
+      return;
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
     
     // Auto advance state for demo
     if (lead.status === "novo") {
-      moveLead(lead.id, "contatado");
+      try {
+        await moveLead(lead.id, "contatado");
+      } catch (err) {
+        console.error("Falha ao mover lead:", err);
+      }
     }
   };
 

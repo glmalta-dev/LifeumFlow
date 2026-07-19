@@ -5,34 +5,50 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { QuickPanel } from "@/components/ui/QuickPanel";
+import { buildWhatsAppUrl } from "@/lib/phone";
 
 export default function HojePage() {
   const router = useRouter();
-  const { appointments, tasks, completeTask, showToast } = useApp();
+  const { appointments, tasks, completeTask, showToast, patients } = useApp();
   
   // States and filters
   const [activeFilter, setActiveFilter] = useState<string>("atrasados");
+  const [selectedPatientId, setSelectedPatientId] = useState("");
+  const [selectedTaskId, setSelectedTaskId] = useState("");
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  // Calculate today string in local timezone (YYYY-MM-DD)
+  const getTodayStr = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const todayStr = getTodayStr();
 
   // Calculate metrics dynamically
-  const pendingTasks = tasks.filter(t => t.status === "pending");
+  const pendingTasks = tasks.filter(t => t.status !== "completed" && t.status !== "cancelled");
   const overdueTasks = pendingTasks.filter(t => t.dueDate < todayStr);
   const todayTasks = pendingTasks.filter(t => t.dueDate === todayStr);
 
   const totalActionsNeeded = overdueTasks.length;
   const totalTasksCount = pendingTasks.length;
 
-  const handleWhatsAppSimulate = (name: string) => {
-    showToast(`Iniciando contato via WhatsApp com ${name}...`, "success");
-    // Simulate opening WhatsApp link in new tab safely
-    window.open(`https://wa.me/5511987654321?text=Olá ${name}, tudo bem?`, "_blank");
+  const handleWhatsAppSimulate = (patientId: string, name: string, description: string) => {
+    const patientObj = patients.find(p => p.id === patientId);
+    const url = buildWhatsAppUrl(patientObj?.phone, `Ola ${name}, tudo bem? Gostaria de falar sobre a pendencia clinica: "${description}".`);
+    if (!url) return showToast("Telefone do paciente invalido ou sem DDD.", "error");
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   const handleScheduleSimulate = (patientId: string) => {
     router.push(`/pacientes/${patientId}/agendamentos/editar`);
   };
 
+  // Se não estiver montado no cliente, renderiza um esqueleto neutro para evitar erro de hidratação (React #418)
   return (
     <>
       <AppHeader title="Hoje" />
@@ -145,8 +161,26 @@ export default function HojePage() {
         <div style={styles.priorityList}>
           {pendingTasks.slice(0, 3).map((task) => {
             const isHigh = task.priority === "high";
+            // Formatar data técnica 2026-07-16 -> 16/07/2026
+            const formatDate = (dateStr: string) => {
+              if (!dateStr) return "";
+              const parts = dateStr.split("-");
+              if (parts.length === 3) {
+                return `${parts[2]}/${parts[1]}/${parts[0]}`;
+              }
+              return dateStr;
+            };
+
             return (
-              <div key={task.id} style={styles.priorityCard}>
+              <div 
+                key={task.id} 
+                style={{ ...styles.priorityCard, cursor: "pointer" }}
+                onClick={() => {
+                  setSelectedPatientId(task.patientId);
+                  setSelectedTaskId(task.id);
+                  setIsPanelOpen(true);
+                }}
+              >
                 <div style={{ ...styles.leftIndicator, backgroundColor: isHigh ? "var(--error)" : "var(--warning)" }} />
                 
                 <div style={styles.cardMain}>
@@ -155,7 +189,7 @@ export default function HojePage() {
                       {isHigh ? "ALTA" : "MÉDIA"}
                     </span>
                     <span style={{ ...styles.dueLabel, color: isHigh ? "var(--error)" : "var(--text-secondary)" }}>
-                      Prazo: {task.dueDate}
+                      Prazo: {formatDate(task.dueDate)}
                     </span>
                   </div>
 
@@ -164,9 +198,13 @@ export default function HojePage() {
                   
                   <div style={styles.cardActions}>
                     <button 
-                      onClick={() => handleWhatsAppSimulate(task.patientName)} 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleWhatsAppSimulate(task.patientId, task.patientName, task.description);
+                      }} 
                       style={styles.actionBtnGreen}
                       title="Enviar mensagem"
+                      aria-label={`Enviar mensagem para ${task.patientName}`}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
@@ -174,9 +212,13 @@ export default function HojePage() {
                     </button>
                     
                     <button 
-                      onClick={() => handleScheduleSimulate(task.patientId)} 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleScheduleSimulate(task.patientId);
+                      }} 
                       style={styles.actionBtnBlue}
                       title="Agendar Consulta"
+                      aria-label={`Agendar consulta para ${task.patientName}`}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -187,9 +229,13 @@ export default function HojePage() {
                     </button>
 
                     <button 
-                      onClick={() => completeTask(task.id)} 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        completeTask(task.id);
+                      }} 
                       style={styles.actionBtnGray}
                       title="Concluir pendência"
+                      aria-label={`Concluir pendência de ${task.patientName}`}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="20 6 9 17 4 12"></polyline>
@@ -238,6 +284,13 @@ export default function HojePage() {
           ))}
         </div>
       </section>
+
+      <QuickPanel 
+        isOpen={isPanelOpen}
+        onClose={() => setIsPanelOpen(false)}
+        patientId={selectedPatientId}
+        taskId={selectedTaskId}
+      />
     </>
   );
 }

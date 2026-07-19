@@ -3,32 +3,72 @@
 import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useApp } from "@/context/AppContext";
+import { supabase } from "@/lib/supabaseClient";
+import { getErrorMessage } from "@/lib/errors";
 
 export default function ArquivosPage() {
   const params = useParams();
   const router = useRouter();
-  const { files, addFile } = useApp();
+  const { files, addFile, activeClinicId, showToast } = useApp();
   
   const patientId = params.patientId as string;
   const filteredFiles = files.filter((f) => f.patientId === patientId);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [filename, setFilename] = useState("");
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const handleUploadSimulate = (e: React.FormEvent) => {
+  const handleUploadReal = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!filename) return;
+    if (!uploadFile) return;
+    if (!supabase || !activeClinicId) {
+      showToast("Conexão com o Supabase ou clínica não ativa.", "error");
+      return;
+    }
     
-    addFile({
-      patientId,
-      name: filename,
-      uploadDate: new Date().toISOString().split('T')[0],
-      size: `${(Math.random() * 5 + 1).toFixed(1)} MB`,
-      mimeType: filename.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/png",
-      downloadUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuAH6DghNOpwVxNj7KcxHRysmfbU"
-    });
-    setFilename("");
-    setIsModalOpen(false);
+    setIsUploading(true);
+    showToast("Fazendo upload do arquivo...", "success");
+
+    try {
+      const fileExt = uploadFile.name.split(".").pop();
+      const fileName = `${activeClinicId}/${patientId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from("patient-exams")
+        .upload(fileName, uploadFile, {
+          cacheControl: "3600",
+          upsert: false
+        });
+
+      if (uploadError) {
+        console.error("Upload error:", uploadError);
+        showToast(`Erro no upload: ${uploadError.message}`, "error");
+        setIsUploading(false);
+        return;
+      }
+
+      const sizeInMB = uploadFile.size / (1024 * 1024);
+      const friendlySize = sizeInMB >= 1 
+        ? `${sizeInMB.toFixed(1)} MB` 
+        : `${(uploadFile.size / 1024).toFixed(0)} KB`;
+
+      await addFile({
+        patientId,
+        name: uploadFile.name,
+        uploadDate: new Date().toISOString().split("T")[0],
+        size: friendlySize,
+        mimeType: uploadFile.type || "application/octet-stream",
+        downloadUrl: `patient-exams/${fileName}`
+      });
+
+      setUploadFile(null);
+      setIsModalOpen(false);
+    } catch (err: unknown) {
+      console.error("Falha ao salvar arquivo no banco:", err);
+      showToast(`Erro ao salvar arquivo no banco: ${getErrorMessage(err, "erro desconhecido")}`, "error");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -36,23 +76,27 @@ export default function ArquivosPage() {
       {isModalOpen && (
         <div style={modalStyles.overlay} onClick={() => setIsModalOpen(false)}>
           <div style={modalStyles.modal} onClick={e => e.stopPropagation()}>
-            <h4 style={{ marginBottom: "12px", fontSize: "14px", fontWeight: 700 }}>Anexar Exame (Simulador)</h4>
-            <form onSubmit={handleUploadSimulate} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <h4 style={{ marginBottom: "12px", fontSize: "14px", fontWeight: 700 }}>Anexar Exame Clínico</h4>
+            <form onSubmit={handleUploadReal} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               <div className="form-group">
-                <label className="form-label">NOME DO ARQUIVO</label>
+                <label htmlFor="file-input" className="form-label">SELECIONE O EXAME (PDF OU IMAGEM)</label>
                 <input
-                  type="text"
+                  id="file-input"
+                  type="file"
+                  accept="image/jpeg,image/png,application/pdf"
                   className="form-control"
-                  placeholder="Ex: radiografia_panoramica.png"
-                  value={filename}
-                  onChange={e => setFilename(e.target.value)}
+                  onChange={e => setUploadFile(e.target.files?.[0] || null)}
                   required
-                  autoFocus
+                  disabled={isUploading}
                 />
               </div>
               <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1, padding: "10px" }}>Anexar</button>
-                <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-secondary" style={{ flex: 1, padding: "10px" }}>Cancelar</button>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1, padding: "10px" }} disabled={isUploading || !uploadFile}>
+                  {isUploading ? "Enviando..." : "Anexar"}
+                </button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-secondary" style={{ flex: 1, padding: "10px" }} disabled={isUploading}>
+                  Cancelar
+                </button>
               </div>
             </form>
           </div>

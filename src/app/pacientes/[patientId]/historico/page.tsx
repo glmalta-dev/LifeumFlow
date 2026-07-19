@@ -1,39 +1,116 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 
+interface TimelineItem {
+  date: string;
+  title: string;
+  description: string;
+  icon: "calendar" | "evolution" | "file" | "task" | "planner";
+  color: string;
+  type: "consultas" | "evolucoes" | "arquivos" | "pendencias" | "planejamentos";
+}
+
 export default function HistoricoPage() {
   const params = useParams();
-  const { appointments, evolutions, files } = useApp();
+  const { appointments, evolutions, files, tasks, getPatientPlanner } = useApp();
   
   const patientId = params.patientId as string;
+  
+  const [plannerItems, setPlannerItems] = useState<TimelineItem[]>([]);
+  const [filter, setFilter] = useState<string>("all");
+  const [mounted, setMounted] = useState(false);
 
-  // Build a unified timeline from different items
-  const timelineItems = [
+  useEffect(() => {
+    let active = true;
+    
+    const loadPlannerCompletedStages = async () => {
+      const areas = ["protese", "implantodontia", "dentistica", "ortodontia"];
+      const stages: TimelineItem[] = [];
+      
+      try {
+        await Promise.all(
+          areas.map(async (area) => {
+            const checklist = await getPatientPlanner(patientId, area);
+            const doneItems = checklist.filter((item) => item.done);
+            doneItems.forEach((i) => {
+              stages.push({
+                date: i.updatedAt ? i.updatedAt.split("T")[0] : new Date().toISOString().split("T")[0],
+                title: `Etapa de Planejamento Concluída`,
+                description: `Área: ${area.toUpperCase()} — ${i.text}`,
+                icon: "planner",
+                color: "#00629e",
+                type: "planejamentos"
+              });
+            });
+          })
+        );
+      } catch (err) {
+        console.error("Falha ao carregar etapas de planejamentos para a timeline:", err);
+      }
+
+      if (active) {
+        setPlannerItems(stages);
+        setMounted(true);
+      }
+    };
+
+    loadPlannerCompletedStages();
+
+    return () => {
+      active = false;
+    };
+  }, [patientId, getPatientPlanner]);
+
+  // Constroi a lista unificada
+  const allItems: TimelineItem[] = [
     ...appointments.filter(a => a.patientId === patientId).map(a => ({
       date: a.date,
       title: `Consulta de ${a.type.toUpperCase()}`,
       description: `Profissional: ${a.professional} • Status: ${a.status.toUpperCase()}`,
-      icon: "calendar",
-      color: "var(--primary)"
+      icon: "calendar" as const,
+      color: "var(--primary)",
+      type: "consultas" as const
     })),
     ...evolutions.filter(e => e.patientId === patientId).map(e => ({
       date: e.date,
       title: `Evolução Clínica: ${e.procedure}`,
       description: e.description,
-      icon: "evolution",
-      color: "var(--success)"
+      icon: "evolution" as const,
+      color: "var(--success)",
+      type: "evolucoes" as const
     })),
     ...files.filter(f => f.patientId === patientId).map(f => ({
       date: f.uploadDate,
       title: `Arquivo Anexado: ${f.name}`,
       description: `Tamanho: ${f.size}`,
-      icon: "file",
-      color: "var(--warning)"
-    }))
-  ].sort((a, b) => b.date.localeCompare(a.date)); // Sort by date descending
+      icon: "file" as const,
+      color: "var(--warning)",
+      type: "arquivos" as const
+    })),
+    ...tasks.filter(t => t.patientId === patientId && t.status === "completed").map(t => ({
+      date: t.dueDate, // data de conclusão simulada pelo vencimento
+      title: `Pendência Resolvida: ${t.title}`,
+      description: t.description || "Nenhuma nota inserida.",
+      icon: "task" as const,
+      color: "var(--text-secondary)",
+      type: "pendencias" as const
+    })),
+    ...plannerItems
+  ].sort((a, b) => b.date.localeCompare(a.date));
+
+  // Filtra itens baseados no filtro selecionado
+  const filteredItems = filter === "all" ? allItems : allItems.filter(item => item.type === filter);
+
+  if (!mounted) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", padding: "40px" }}>
+        <p>Carregando histórico unificado...</p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -42,13 +119,33 @@ export default function HistoricoPage() {
         <span style={styles.sub}>Histórico cronológico consolidado</span>
       </div>
 
+      {/* Pílulas de Filtro */}
+      <div style={styles.filterBar} className="hide-scrollbar">
+        {[
+          { id: "all", label: "Todos" },
+          { id: "consultas", label: "Consultas" },
+          { id: "evolucoes", label: "Evoluções" },
+          { id: "arquivos", label: "Arquivos" },
+          { id: "pendencias", label: "Pendências" },
+          { id: "planejamentos", label: "Planejamento" }
+        ].map(btn => (
+          <button
+            key={btn.id}
+            onClick={() => setFilter(btn.id)}
+            style={filter === btn.id ? styles.filterBtnActive : styles.filterBtn}
+          >
+            {btn.label}
+          </button>
+        ))}
+      </div>
+
       <div style={styles.timeline}>
-        {timelineItems.length === 0 ? (
+        {filteredItems.length === 0 ? (
           <div style={styles.emptyState}>
-            <p>Nenhuma atividade registrada no histórico.</p>
+            <p>Nenhuma atividade registrada nesta categoria.</p>
           </div>
         ) : (
-          timelineItems.map((item, idx) => (
+          filteredItems.map((item, idx) => (
             <div key={idx} style={styles.timelineItem}>
               <div style={styles.leftCol}>
                 <div style={{ ...styles.iconBadge, backgroundColor: item.color }}>
@@ -72,12 +169,23 @@ export default function HistoricoPage() {
                       <polyline points="14 2 14 8 20 8"></polyline>
                     </svg>
                   )}
+                  {item.icon === "task" && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  )}
+                  {item.icon === "planner" && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                  )}
                 </div>
-                {idx < timelineItems.length - 1 && <div style={styles.timelineLine} />}
+                {idx < filteredItems.length - 1 && <div style={styles.timelineLine} />}
               </div>
               
               <div style={styles.rightCol}>
-                <span style={styles.itemDate}>{item.date}</span>
+                <span style={styles.itemDate}>{item.date.split("-").reverse().join("/")}</span>
                 <h4 style={styles.itemTitle}>{item.title}</h4>
                 <p style={styles.itemDesc}>{item.description}</p>
               </div>
@@ -164,5 +272,36 @@ const styles = {
     textAlign: "center" as const,
     padding: "40px 20px",
     color: "var(--text-secondary)",
+  },
+  filterBar: {
+    display: "flex",
+    gap: "8px",
+    overflowX: "auto" as const,
+    paddingBottom: "8px",
+    paddingTop: "4px",
+  },
+  filterBtn: {
+    padding: "5px 12px",
+    borderRadius: "20px",
+    border: "1px solid var(--border-light)",
+    backgroundColor: "#ffffff",
+    color: "var(--text-secondary)",
+    fontSize: "11px",
+    fontWeight: 600,
+    cursor: "pointer",
+    whiteSpace: "nowrap" as const,
+    flexShrink: 0,
+  },
+  filterBtnActive: {
+    padding: "5px 12px",
+    borderRadius: "20px",
+    border: "1px solid var(--primary)",
+    backgroundColor: "rgba(20, 99, 230, 0.06)",
+    color: "var(--primary)",
+    fontSize: "11px",
+    fontWeight: 700,
+    cursor: "pointer",
+    whiteSpace: "nowrap" as const,
+    flexShrink: 0,
   }
 };

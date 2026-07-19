@@ -3,6 +3,7 @@
 import React from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useApp } from "@/context/AppContext";
+import { buildWhatsAppUrl, normalizeBrazilianPhone } from "@/lib/phone";
 
 export default function ResumoPage() {
   const params = useParams();
@@ -19,8 +20,15 @@ export default function ResumoPage() {
     .sort((a, b) => a.date.localeCompare(b.date))[0];
 
   const handleWhatsApp = () => {
-    showToast("Abrindo conversa via WhatsApp...", "success");
-    window.open(`https://wa.me/5511987654321?text=Olá ${patient.name}, gostaria de falar sobre seu tratamento.`, "_blank");
+    const url = buildWhatsAppUrl(patient.phone, `Ola ${patient.name}, gostaria de falar sobre seu tratamento.`);
+    if (!url) return showToast("Telefone do paciente invalido ou sem DDD.", "error");
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const handleCall = () => {
+    const phone = normalizeBrazilianPhone(patient.phone);
+    if (!phone.valid) return showToast(phone.reason, "error");
+    window.open(`tel:${phone.national}`, "_self");
   };
 
   return (
@@ -115,7 +123,7 @@ export default function ResumoPage() {
           </svg>
           WhatsApp
         </button>
-        <button onClick={() => showToast("Simulando ligação telefônica...", "success")} className="btn btn-secondary" style={styles.commBtn}>
+        <button onClick={handleCall} className="btn btn-secondary" style={styles.commBtn}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
           </svg>

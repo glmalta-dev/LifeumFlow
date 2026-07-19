@@ -13,11 +13,13 @@ interface AppShellProps {
 export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const pathname = usePathname();
   const router = useRouter();
-  const { quickCaptureOpen, setQuickCaptureOpen, addTask } = useApp();
+  const { quickCaptureOpen, setQuickCaptureOpen, addTask, patients, showToast } = useApp();
 
   const [isCreatingTask, setIsCreatingTask] = React.useState(false);
   const [quickTitle, setQuickTitle] = React.useState("");
   const [quickDesc, setQuickDesc] = React.useState("");
+  const [selectedPatientId, setSelectedPatientId] = React.useState("");
+  const selectedPatient = patients.find((patient) => patient.id === selectedPatientId);
 
   // Hide BottomNavigation on form sub-routes for total focus
   const hideBottomNav = 
@@ -32,13 +34,24 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     router.push(route);
   };
 
-  const handleCreateQuickTask = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!quickTitle) return;
+  const handlePatientAction = (suffix: string) => {
+    if (!selectedPatient) {
+      showToast("Selecione o paciente antes de continuar.", "error");
+      return;
+    }
+    handleQuickAction(`/pacientes/${selectedPatient.id}/${suffix}`);
+  };
 
-    addTask({
-      patientId: "pat-1", // Simulated for Carlos Silva
-      patientName: "Carlos Eduardo Silva",
+  const handleCreateQuickTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickTitle || !selectedPatient) {
+      showToast("Selecione o paciente e informe o titulo da pendencia.", "error");
+      return;
+    }
+
+    await addTask({
+      patientId: selectedPatient.id,
+      patientName: selectedPatient.name,
       title: quickTitle,
       description: quickDesc,
       dueDate: new Date().toISOString().split('T')[0],
@@ -82,6 +95,13 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             {isCreatingTask ? (
               <form onSubmit={handleCreateQuickTask} style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%" }}>
                 <div className="form-group">
+                  <label className="form-label" htmlFor="quick-task-patient">PACIENTE</label>
+                  <select id="quick-task-patient" className="form-control" value={selectedPatientId} onChange={(event) => setSelectedPatientId(event.target.value)} required>
+                    <option value="">Selecione...</option>
+                    {patients.map((patient) => <option key={patient.id} value={patient.id}>{patient.name}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
                   <label className="form-label">TÍTULO DA PENDÊNCIA</label>
                   <input
                     type="text"
@@ -118,6 +138,14 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                 </div>
               </form>
             ) : (
+              <div>
+                <div className="form-group" style={{ marginBottom: 12 }}>
+                  <label className="form-label" htmlFor="quick-action-patient">PACIENTE PARA A ACAO</label>
+                  <select id="quick-action-patient" className="form-control" value={selectedPatientId} onChange={(event) => setSelectedPatientId(event.target.value)}>
+                    <option value="">Selecione um paciente...</option>
+                    {patients.map((patient) => <option key={patient.id} value={patient.id}>{patient.name}</option>)}
+                  </select>
+                </div>
               <div style={styles.actionsGrid}>
                 <button 
                   onClick={() => handleQuickAction("/pacientes/novo")} 
@@ -135,7 +163,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                 </button>
 
                 <button 
-                  onClick={() => handleQuickAction("/pacientes/pat-1/agendamentos/editar")} 
+                  onClick={() => handlePatientAction("agendamentos/editar")}
                   style={styles.actionItem}
                 >
                   <div style={{ ...styles.iconWrap, backgroundColor: "#eaf8f1", color: "var(--success)" }}>
@@ -150,7 +178,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                 </button>
 
                 <button 
-                  onClick={() => handleQuickAction("/pacientes/pat-1/evolucoes/nova")} 
+                  onClick={() => handlePatientAction("evolucoes/nova")}
                   style={styles.actionItem}
                 >
                   <div style={{ ...styles.iconWrap, backgroundColor: "#fff4e5", color: "var(--warning)" }}>
@@ -174,6 +202,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                   </div>
                   <span style={styles.actionLabel}>Nova Pendência</span>
                 </button>
+              </div>
               </div>
             )}
             

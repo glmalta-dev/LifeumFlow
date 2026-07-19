@@ -8,7 +8,7 @@ import { BackHeader } from "@/components/layout/BackHeader";
 export default function NovaEvolucaoPage() {
   const params = useParams();
   const router = useRouter();
-  const { addEvolution, patients } = useApp();
+  const { addEvolution, patients, showToast } = useApp();
 
   const patientId = params.patientId as string;
   const patient = patients.find((p) => p.id === patientId);
@@ -19,22 +19,28 @@ export default function NovaEvolucaoPage() {
   const [nextStep, setNextStep] = useState("");
   const [returnDays, setReturnDays] = useState(30);
   const [professional, setProfessional] = useState("Dr. Gabriel Mendes");
+  const [complication, setComplication] = useState("");
+  const [conduct, setConduct] = useState("");
+  const [guidance, setGuidance] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!procedure || !description) {
-      alert("Por favor, preencha o procedimento e o relato clínico.");
+    if (!procedure || !description || !nextStep) {
+      showToast("Preencha procedimento, relato clinico e proxima etapa.", "error");
       return;
     }
 
-    addEvolution({
+    await addEvolution({
       patientId,
       date: new Date().toISOString().split('T')[0],
       professional,
       procedure,
       description,
       nextStep: nextStep || undefined,
-      recommendedReturnDays: returnDays || undefined
+      recommendedReturnDays: returnDays || undefined,
+      complication: complication || undefined,
+      conduct: conduct || undefined,
+      guidance: guidance || undefined
     });
 
     router.push(`/pacientes/${patientId}/evolucoes`);
@@ -75,6 +81,19 @@ export default function NovaEvolucaoPage() {
             onChange={(e) => setDescription(e.target.value)} 
             required
           />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label" htmlFor="evolution-complication">INTERCORRENCIA</label>
+          <textarea id="evolution-complication" rows={2} className="form-control" value={complication} onChange={(e) => setComplication(e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label className="form-label" htmlFor="evolution-conduct">CONDUTA</label>
+          <textarea id="evolution-conduct" rows={2} className="form-control" value={conduct} onChange={(e) => setConduct(e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label className="form-label" htmlFor="evolution-guidance">ORIENTACAO</label>
+          <textarea id="evolution-guidance" rows={2} className="form-control" value={guidance} onChange={(e) => setGuidance(e.target.value)} />
         </div>
 
         {/* Próximo Passo */}

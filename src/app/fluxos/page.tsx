@@ -40,7 +40,8 @@ export default function FluxosPage() {
       </div>
 
       <div style={styles.accordionContainer}>
-        {currentFlow.stages.map((stage) => {
+        {!currentFlow && <div className="card"><p>Nenhum fluxo configurado para esta clinica.</p></div>}
+        {currentFlow?.stages.map((stage) => {
           const isOpen = openStages[stage.id];
           return (
             <div key={stage.id} style={styles.stageGroup}>

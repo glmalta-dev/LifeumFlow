@@ -45,19 +45,16 @@ export const BottomNavigation: React.FC = () => {
         </svg>
       </button>
 
-      {/* 4. Fluxos */}
-      <Link href="/fluxos" style={isActive("/fluxos") ? styles.activeTab : styles.tab}>
+      {/* 4. CRM */}
+      <Link href="/contatos" style={isActive("/contatos") ? styles.activeTab : styles.tab}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3z"></path>
-          <path d="M6 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3z"></path>
-          <path d="M15 6H9"></path>
-          <path d="M15 18H9"></path>
+          <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"></path>
         </svg>
-        <span style={styles.label}>Fluxos</span>
+        <span style={styles.label}>CRM</span>
       </Link>
-
+ 
       {/* 5. Mais */}
-      <Link href="/mais" style={isActive("/mais") || isActive("/contatos") || isActive("/alertas") ? styles.activeTab : styles.tab}>
+      <Link href="/mais" style={isActive("/mais") || isActive("/alertas") ? styles.activeTab : styles.tab}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="1"></circle>
           <circle cx="19" cy="12" r="1"></circle>

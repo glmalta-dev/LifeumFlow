@@ -11,7 +11,6 @@ interface AppHeaderProps {
 export const AppHeader: React.FC<AppHeaderProps> = ({ title }) => {
   const { tasks } = useApp();
   const pendingHigh = tasks.filter(t => t.status === "pending" && t.priority === "high").length;
-
   const getFormattedDate = () => {
     const options: Intl.DateTimeFormatOptions = { 
       weekday: 'long', 
@@ -28,7 +27,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ title }) => {
           <div style={styles.avatar}>G</div>
           <div>
             <div style={styles.welcome}>Olá, Gabriel</div>
-            <div style={styles.date}>{getFormattedDate()}</div>
+            <div style={styles.date} suppressHydrationWarning>{getFormattedDate()}</div>
           </div>
         </div>
         <Link href="/alertas" style={styles.notificationBtn}>

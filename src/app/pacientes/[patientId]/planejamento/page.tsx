@@ -1,26 +1,119 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useApp } from "@/context/AppContext";
+
+interface PlanningArea {
+  id: string;
+  title: string;
+  color: string;
+  status: string;
+  count: string;
+  progress: number;
+}
 
 export default function PlanejamentoPage() {
   const params = useParams();
   const router = useRouter();
-  const { patients } = useApp();
+  const { patients, getPatientPlanner } = useApp();
 
   const patientId = params.patientId as string;
   const patient = patients.find((p) => p.id === patientId);
 
-  if (!patient) return null;
+  const [areas, setAreas] = useState<PlanningArea[]>([]);
+  const [mounted, setMounted] = useState(false);
 
-  // Mock planner areas
-  const areas = [
-    { id: "protese", title: "Prótese", status: "Em andamento", count: "3/5 etapas", progress: 60, color: "#1463e6" },
-    { id: "implantodontia", title: "Implantodontia", status: "Pendente", count: "0/3 etapas", progress: 0, color: "#00629e" },
-    { id: "dentistica", title: "Dentística", status: "Concluído", count: "4/4 etapas", progress: 100, color: "#26B978" },
-    { id: "ortodontia", title: "Ortodontia", status: "Não Iniciado", count: "0/1 etapa", progress: 0, color: "#737786" }
-  ];
+  const getInitialChecklist = (area: string) => {
+    if (area === "protese") {
+      return [
+        { id: 1, done: true },
+        { id: 2, done: true },
+        { id: 3, done: false },
+        { id: 4, done: false },
+        { id: 5, done: false }
+      ];
+    }
+    if (area === "implantodontia") {
+      return [
+        { id: 1, done: false },
+        { id: 2, done: false },
+        { id: 3, done: false }
+      ];
+    }
+    if (area === "dentistica") {
+      return [
+        { id: 1, done: true },
+        { id: 2, done: true },
+        { id: 3, done: true },
+        { id: 4, done: true }
+      ];
+    }
+    return [
+      { id: 1, done: false },
+      { id: 2, done: false }
+    ];
+  };
+
+  useEffect(() => {
+    let active = true;
+    
+    const loadAllPlanners = async () => {
+      const areasMeta = [
+        { id: "protese", title: "Prótese", color: "#1463e6" },
+        { id: "implantodontia", title: "Implantodontia", color: "#00629e" },
+        { id: "dentistica", title: "Dentística", color: "#26B978" },
+        { id: "ortodontia", title: "Ortodontia", color: "#737786" }
+      ];
+
+      const list = await Promise.all(
+        areasMeta.map(async (area) => {
+          let checklist = await getPatientPlanner(patientId, area.id);
+          
+          if (checklist.length === 0) {
+            checklist = getInitialChecklist(area.id).map(c => ({ id: c.id, text: "", done: c.done }));
+          }
+
+          const total = checklist.length;
+          const done = checklist.filter((item) => item.done).length;
+          const progress = total > 0 ? Math.round((done / total) * 100) : 0;
+          
+          let status = "Não Iniciado";
+          if (done === total && total > 0) {
+            status = "Concluído";
+          } else if (done > 0) {
+            status = "Em andamento";
+          }
+
+          return {
+            ...area,
+            status,
+            count: `${done}/${total} etapas`,
+            progress
+          };
+        })
+      );
+
+      if (active) {
+        setAreas(list);
+        setMounted(true);
+      }
+    };
+
+    loadAllPlanners();
+
+    return () => {
+      active = false;
+    };
+  }, [patientId, getPatientPlanner]);
+
+  if (!patient || !mounted || areas.length === 0) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", padding: "40px" }}>
+        <p>Carregando planejamento...</p>
+      </div>
+    );
+  }
 
   const handleAreaClick = (areaId: string) => {
     router.push(`/pacientes/${patientId}/planejamento/${areaId}`);
@@ -39,6 +132,15 @@ export default function PlanejamentoPage() {
             key={area.id} 
             onClick={() => handleAreaClick(area.id)}
             style={styles.areaCard}
+            role="button"
+            tabIndex={0}
+            aria-label={`Planejamento de ${area.title}, status: ${area.status}, progresso: ${area.count}`}
+            onKeyDown={(e) => {
+              if (e.key === " " || e.key === "Enter") {
+                e.preventDefault();
+                handleAreaClick(area.id);
+              }
+            }}
           >
             <div style={styles.cardHeader}>
               <div style={styles.areaTitleArea}>
@@ -65,7 +167,7 @@ export default function PlanejamentoPage() {
             </div>
             
             <div style={styles.footerRow}>
-              <span style={styles.footerText}>Próxima Ação pendente</span>
+              <span style={styles.footerText}>Ver detalhes do planejamento</span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: "var(--outline)" }}>
                 <polyline points="9 18 15 12 9 6"></polyline>
               </svg>
@@ -110,6 +212,7 @@ const styles = {
     cursor: "pointer",
     boxShadow: "var(--shadow-sm)",
     transition: "var(--transition-fast)",
+    outline: "none",
   },
   cardHeader: {
     display: "flex",
