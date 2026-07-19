@@ -6,13 +6,12 @@ import { useRouter } from "next/navigation";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useApp } from "@/context/AppContext";
 import { supabase } from "@/lib/supabaseClient";
+import { isSupabaseConfigured } from "@/lib/supabaseConfig";
 
 export default function MaisPage() {
   const router = useRouter();
   const { showToast } = useApp();
-  const supabaseConfigured = Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  );
+  const supabaseConfigured = isSupabaseConfigured;
 
   // Verificar se o Supabase está configurado (de forma simplificada verificando se há chaves ativas no build)
   const handleLogout = async () => {
@@ -98,7 +97,7 @@ export default function MaisPage() {
         <p style={{ ...styles.alertDesc, color: "var(--text-secondary)" }}>
           {supabaseConfigured 
             ? "A sincronização real de dados clínicos com o Supabase está ativada."
-            : "Insira a chave NEXT_PUBLIC_SUPABASE_ANON_KEY no arquivo .env.local para ativar a gravação em banco de dados real da clínica."}
+            : "Configure a URL e a chave publica do Supabase para ativar a gravação em banco de dados real da clínica."}
         </p>
       </div>
 

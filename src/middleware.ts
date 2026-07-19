@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import {
+  isSupabaseConfigured,
+  supabasePublishableKey,
+  supabaseUrl,
+} from "@/lib/supabaseConfig";
 
 export async function middleware(request: NextRequest) {
   const token = request.cookies.get("lifeum-flow-session-jwt")?.value;
@@ -18,14 +23,11 @@ export async function middleware(request: NextRequest) {
 
   if (token) {
     try {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-
-      if (supabaseUrl && supabaseAnonKey) {
+      if (isSupabaseConfigured) {
         // Valida o token JWT diretamente contra o endpoint Auth do Supabase
         const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
           headers: {
-            apikey: supabaseAnonKey,
+            apikey: supabasePublishableKey,
             Authorization: `Bearer ${token}`,
           },
         });
