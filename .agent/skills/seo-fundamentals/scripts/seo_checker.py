@@ -34,7 +34,7 @@ except:
 SKIP_DIRS = {
     'node_modules', '.next', 'dist', 'build', '.git', '.github',
     '__pycache__', '.vscode', '.idea', 'coverage', 'test', 'tests',
-    '__tests__', 'spec', 'docs', 'documentation', 'examples'
+    '__tests__', 'spec', 'docs', 'documentation', 'examples', 'stitch-screens'
 }
 
 # Files to skip (not pages)
@@ -105,18 +105,21 @@ def check_page(file_path: Path) -> dict:
     # Detect if this is a layout/template file (has Head component)
     is_layout = 'Head>' in content or '<head>' in content.lower() or '<head ' in content.lower()
     
+    # Support Next.js metadata API
+    has_next_metadata = 'export const metadata' in content or 'metadata: Metadata' in content
+    
     # 1. Title tag
-    has_title = '<title' in content.lower() or 'title=' in content or 'Head>' in content
+    has_title = '<title' in content.lower() or 'title=' in content or 'Head>' in content or has_next_metadata
     if not has_title and is_layout:
         issues.append("Missing <title> tag")
     
     # 2. Meta description
-    has_description = 'name="description"' in content.lower() or 'name=\'description\'' in content.lower()
+    has_description = 'name="description"' in content.lower() or 'name=\'description\'' in content.lower() or has_next_metadata
     if not has_description and is_layout:
         issues.append("Missing meta description")
     
     # 3. Open Graph tags
-    has_og = 'og:' in content or 'property="og:' in content.lower()
+    has_og = 'og:' in content or 'property="og:' in content.lower() or has_next_metadata
     if not has_og and is_layout:
         issues.append("Missing Open Graph tags")
     

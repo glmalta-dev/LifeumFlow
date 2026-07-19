@@ -13,10 +13,18 @@ export default function PatientLayout({ children }: PatientLayoutProps) {
   const params = useParams();
   const pathname = usePathname();
   const router = useRouter();
-  const { patients } = useApp();
+  const { patients, isLoading } = useApp();
   
   const patientId = params.patientId as string;
   const patient = patients.find((p) => p.id === patientId);
+
+  if (isLoading) {
+    return (
+      <div style={styles.loadingContainer}>
+        <p>Carregando dados do paciente...</p>
+      </div>
+    );
+  }
 
   if (!patient) {
     return (
@@ -195,6 +203,14 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     gap: "16px",
+    padding: "40px 20px",
+    width: "100%",
+  },
+  loadingContainer: {
+    display: "flex",
+    flexDirection: "column" as const,
+    alignItems: "center",
+    justifyContent: "center",
     padding: "40px 20px",
     width: "100%",
   }

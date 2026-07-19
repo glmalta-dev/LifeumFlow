@@ -12,6 +12,9 @@ export default function ContatosPage() {
   const [phone, setPhone] = useState("");
   const [source, setSource] = useState("");
   const [saving, setSaving] = useState(false);
+  const [selectedStage, setSelectedStage] = useState<Lead["status"]>("novo");
+
+  const filteredLeads = leads.filter((lead) => lead.status === selectedStage);
 
   const createLead = async (event: React.FormEvent) => {
     event.preventDefault(); setSaving(true);
@@ -26,7 +29,6 @@ export default function ContatosPage() {
       return;
     }
     window.open(url, "_blank", "noopener,noreferrer");
-    
   };
 
   const recordContact = async (lead: Lead) => {
@@ -54,13 +56,35 @@ export default function ContatosPage() {
         <button className="btn btn-primary" disabled={saving}>{saving ? "Salvando..." : "Cadastrar lead"}</button>
       </form>
 
+      {/* Seletor de Estágio - Tabs para CRM Mobile-first */}
+      <div style={styles.tabContainer}>
+        {(["novo", "contatado", "agendado", "arquivado"] as const).map((stage) => {
+          const count = leads.filter((l) => l.status === stage).length;
+          const labelMap: Record<string, string> = {
+            novo: "Novos",
+            contatado: "Contatados",
+            agendado: "Agendados",
+            arquivado: "Arquivados",
+          };
+          return (
+            <button
+              key={stage}
+              onClick={() => setSelectedStage(stage)}
+              style={selectedStage === stage ? styles.tabActive : styles.tab}
+            >
+              {labelMap[stage]} ({count})
+            </button>
+          );
+        })}
+      </div>
+
       <div style={styles.leadList}>
-        {leads.length === 0 ? (
+        {filteredLeads.length === 0 ? (
           <div style={styles.emptyState}>
-            <p>Nenhum lead ativo encontrado.</p>
+            <p>Nenhum lead nesta etapa.</p>
           </div>
         ) : (
-          leads.map((lead) => {
+          filteredLeads.map((lead) => {
             const isNew = lead.status === "novo";
             return (
               <div key={lead.id} style={styles.leadCard}>
@@ -113,6 +137,39 @@ export default function ContatosPage() {
 }
 
 const styles = {
+  tabContainer: {
+    display: "flex",
+    borderBottom: "1px solid var(--border-light)",
+    width: "100%",
+    marginBottom: "14px",
+    overflowX: "auto" as const,
+  },
+  tab: {
+    flex: 1,
+    padding: "8px 4px",
+    background: "none",
+    border: "none",
+    borderBottom: "2px solid transparent",
+    fontSize: "11px",
+    fontWeight: 600,
+    color: "var(--text-secondary)",
+    cursor: "pointer",
+    textAlign: "center" as const,
+    whiteSpace: "nowrap" as const,
+  },
+  tabActive: {
+    flex: 1,
+    padding: "8px 4px",
+    background: "none",
+    border: "none",
+    borderBottom: "2px solid var(--primary)",
+    fontSize: "11px",
+    fontWeight: 700,
+    color: "var(--primary)",
+    cursor: "pointer",
+    textAlign: "center" as const,
+    whiteSpace: "nowrap" as const,
+  },
   leadList: {
     display: "flex",
     flexDirection: "column" as const,
