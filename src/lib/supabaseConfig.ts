@@ -1,6 +1,6 @@
 const fallbackSupabaseUrl = "https://jcteqdvkviodempumgqp.supabase.co";
 const fallbackSupabasePublishableKey =
-  "sb_publishable_Y-iUfbILAJvfmDGQ-J1djg_wBN-ud3J";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjdGVxZHZrdmlvZGVtcHVtZ3FwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyMzc2NjMsImV4cCI6MjA5OTgxMzY2M30.-8fRGSopeWzulNdSJ6WgDe5hZ7tPOTkYvTpGhWSmohU";
 
 export const supabaseUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL || fallbackSupabaseUrl;

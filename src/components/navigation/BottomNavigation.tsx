@@ -14,7 +14,7 @@ export const BottomNavigation: React.FC = () => {
   };
 
   return (
-    <nav style={styles.navBar} aria-label="Navegação principal">
+    <nav className="app-bottom-navigation" style={styles.navBar} aria-label="Navegação principal">
       {/* 1. Hoje */}
       <Link href="/hoje" style={isActive("/hoje") ? styles.activeTab : styles.tab}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

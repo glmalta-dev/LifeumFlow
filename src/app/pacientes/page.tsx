@@ -71,7 +71,7 @@ export default function PacientesPage() {
           </button>
           <button onClick={() => setStatusFilter("inactive")} style={statusFilter === "inactive" ? styles.activePill : styles.pill}>Inativos</button>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
+        <div className="patient-advanced-filters" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
           <select className="form-control" aria-label="Filtrar por cidade" value={cityFilter} onChange={event => setCityFilter(event.target.value)}><option value="all">Todas cidades</option>{cities.map(city => <option key={city} value={city}>{city}</option>)}</select>
           <select className="form-control" aria-label="Filtrar por proxima acao" value={actionFilter} onChange={event => setActionFilter(event.target.value as typeof actionFilter)}><option value="all">Todas acoes</option><option value="with">Com proxima acao</option><option value="without">Sem proxima acao</option></select>
           <select className="form-control" aria-label="Ordenar pacientes" value={sortBy} onChange={event => setSortBy(event.target.value as typeof sortBy)}><option value="name">Ordem alfabetica</option><option value="nextAction">Proxima acao</option></select>

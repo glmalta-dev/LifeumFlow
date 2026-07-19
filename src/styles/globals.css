@@ -7,6 +7,12 @@
   padding: 0;
 }
 
+html,
+body {
+  width: 100%;
+  min-height: 100%;
+}
+
 body {
   background-color: #0b0f19; /* Fundo escuro premium para o simulador */
   color: var(--text-primary);
@@ -14,7 +20,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
+  min-height: 100dvh;
   overflow: hidden;
 }
 
@@ -27,8 +33,10 @@ select:focus-visible, textarea:focus-visible, [role="button"]:focus-visible {
 
 /* Container do Simulador Mobile (390x844px) */
 .mobile-simulator {
-  width: 390px;
-  height: 844px;
+  width: min(390px, 100vw);
+  height: min(844px, 100dvh);
+  max-width: 100vw;
+  max-height: 100dvh;
   background-color: var(--bg-app);
   border-radius: 40px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 12px #1f293d;
@@ -39,7 +47,7 @@ select:focus-visible, textarea:focus-visible, [role="button"]:focus-visible {
 }
 
 /* Responsivo para celulares reais */
-@media (max-width: 480px) {
+@media (max-width: 480px), (max-height: 700px) {
   body {
     background-color: var(--bg-app);
   }
@@ -50,14 +58,41 @@ select:focus-visible, textarea:focus-visible, [role="button"]:focus-visible {
     box-shadow: none;
   }
   .simulator-content {
-    padding: 14px;
-    padding-bottom: calc(90px + env(safe-area-inset-bottom));
+    padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) calc(84px + env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+  }
+  .app-bottom-navigation {
+    height: calc(68px + env(safe-area-inset-bottom)) !important;
+    padding: 0 max(8px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(8px, env(safe-area-inset-left)) !important;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+  }
+  .app-bottom-sheet {
+    max-height: calc(100dvh - env(safe-area-inset-top));
+    overflow-y: auto;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom)) !important;
+  }
+  .form-control {
+    font-size: 16px;
   }
 }
 
 @media (max-width: 360px) {
   .simulator-content { padding-inline: 10px; }
   .btn { padding-inline: 12px; }
+  .responsive-form-row { flex-direction: column !important; }
+  .patient-advanced-filters { grid-template-columns: 1fr !important; }
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+  .mobile-simulator {
+    width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .simulator-content {
+    padding-top: max(10px, env(safe-area-inset-top));
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -79,7 +114,13 @@ select:focus-visible, textarea:focus-visible, [role="button"]:focus-visible {
   flex-direction: column;
   gap: 16px;
   -webkit-overflow-scrolling: touch;
+  min-width: 0;
+  overscroll-behavior-y: contain;
 }
+
+.simulator-content > * { min-width: 0; max-width: 100%; }
+.responsive-form-row { min-width: 0; }
+.responsive-form-row > * { min-width: 0; }
 
 /* Custom Scrollbar para o Simulador */
 .simulator-content::-webkit-scrollbar {
@@ -122,6 +163,8 @@ p {
   gap: 8px;
   width: 100%;
   text-decoration: none;
+  min-height: 44px;
+  touch-action: manipulation;
 }
 
 .btn-primary {

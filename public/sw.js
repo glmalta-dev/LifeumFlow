@@ -1,71 +1,58 @@
-const CACHE_NAME = "lifeum-flow-cache-v1";
-const ASSETS = [
-  "/",
-  "/hoje",
-  "/pacientes",
-  "/agenda",
-  "/fluxos",
-  "/mais",
-  "/icon.svg",
-  "/manifest.json"
-];
+const CACHE_NAME = "lifeum-flow-static-v3";
+const STATIC_ASSETS = ["/icon.svg", "/manifest.json"];
 
-// Install Event
-self.addEventListener("install", (e) => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS).catch((err) => console.log("SW Install cache warn: ", err));
-    })
-  );
+self.addEventListener("install", (event) => {
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS)));
   self.skipWaiting();
 });
 
-// Activate Event
-self.addEventListener("activate", (e) => {
-  e.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-        })
-      );
-    })
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
   );
   self.clients.claim();
 });
 
-// Fetch Event (Network-First Fallback to Cache)
-self.addEventListener("fetch", (e) => {
-  // Only handle GET requests and local assets
-  if (e.request.method !== "GET" || !e.request.url.startsWith(self.location.origin)) {
-    return;
+self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET" || !event.request.url.startsWith(self.location.origin)) return;
+  const requestUrl = new URL(event.request.url);
+  if (!STATIC_ASSETS.includes(requestUrl.pathname)) return;
+  event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request)));
+});
+
+self.addEventListener("push", (event) => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch {
+    payload = { body: event.data ? event.data.text() : "Voce tem uma nova atualizacao." };
   }
 
-  e.respondWith(
-    fetch(e.request)
-      .then((response) => {
-        // Clone response to cache
-        const resClone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(e.request, resClone);
-        });
-        return response;
-      })
-      .catch(() => {
-        // Offline fallback
-        return caches.match(e.request).then((cachedResponse) => {
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          // Fallback if resource is not in cache
-          return new Response("Offline. Conteúdo não disponível em cache.", {
-            status: 503,
-            statusText: "Service Unavailable",
-            headers: new Headers({ "Content-Type": "text/plain; charset=utf-8" })
-          });
-        });
-      })
+  const title = payload.title || "Lifeum Flow";
+  event.waitUntil(self.registration.showNotification(title, {
+    body: payload.body || "Voce tem uma nova atualizacao.",
+    icon: "/icon.svg",
+    badge: "/icon.svg",
+    tag: payload.tag || "lifeum-flow",
+    renotify: true,
+    vibrate: [200, 100, 200],
+    data: { url: payload.url || "/alertas" },
+  }));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const requestedPath = event.notification.data?.url || "/alertas";
+  const targetUrl = new URL(requestedPath, self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(async (clients) => {
+      for (const client of clients) {
+        if (new URL(client.url).origin === self.location.origin) {
+          await client.navigate(targetUrl);
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow(targetUrl);
+    })
   );
 });

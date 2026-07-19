@@ -8,6 +8,7 @@ import {
 } from "../types";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabaseClient";
+import { notifyClinic } from "../lib/pushNotifications";
 
 // --- Mappers para Supabase (camelCase <-> snake_case) ---
 
@@ -728,6 +729,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setAppointments((prev) => [mapAppointmentFromDb(data), ...prev]);
     showToast("Agendamento clínico criado!", "success");
+    void notifyClinic(clinicId, {
+      title: "Novo agendamento",
+      message: `Um agendamento foi criado para ${appInput.date} as ${appInput.time}.`,
+      url: "/agenda",
+      tag: `appointment-${data.id}`,
+    }).catch((notificationError) => console.warn("Web Push de agendamento nao enviado:", notificationError));
     return null;
   };
 
@@ -767,6 +774,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setTasks((prev) => [mapTaskFromDb(data), ...prev]);
     showToast("Nova pendência registrada!", "success");
+    void notifyClinic(clinicId, {
+      title: "Nova pendencia",
+      message: `Ha uma nova pendencia com prazo em ${taskInput.dueDate}.`,
+      url: "/alertas",
+      tag: `task-${data.id}`,
+    }).catch((notificationError) => console.warn("Web Push de pendencia nao enviado:", notificationError));
   };
 
   const completeTask = async (id: string): Promise<void> => {

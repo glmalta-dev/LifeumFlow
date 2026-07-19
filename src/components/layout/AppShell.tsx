@@ -84,7 +84,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           setQuickCaptureOpen(false);
           setIsCreatingTask(false);
         }}>
-          <div style={styles.bottomSheet} onClick={(e) => e.stopPropagation()}>
+          <div className="app-bottom-sheet" style={styles.bottomSheet} onClick={(e) => e.stopPropagation()}>
             <div style={styles.sheetHeader}>
               <div style={styles.dragHandle} />
               <h2 style={styles.sheetTitle}>
